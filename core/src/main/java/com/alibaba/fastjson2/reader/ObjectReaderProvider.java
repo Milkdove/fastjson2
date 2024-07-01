@@ -15,7 +15,6 @@ import com.alibaba.fastjson2.util.Fnv;
 import com.alibaba.fastjson2.util.JDKUtils;
 import com.alibaba.fastjson2.util.TypeUtils;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -159,10 +158,17 @@ public class ObjectReaderProvider
     final ObjectReaderCreator creator;
     final List<ObjectReaderModule> modules = new ArrayList<>();
 
+    boolean disableReferenceDetect = JSONFactory.isDisableReferenceDetect();
+    boolean disableArrayMapping = JSONFactory.isDisableArrayMapping();
+    boolean disableJSONB = JSONFactory.isDisableJSONB();
+    boolean disableAutoType = JSONFactory.isDisableAutoType();
+    boolean disableSmartMatch = JSONFactory.isDisableSmartMatch();
+
     private long[] acceptHashCodes;
 
     private AutoTypeBeforeHandler autoTypeBeforeHandler = DEFAULT_AUTO_TYPE_BEFORE_HANDLER;
     private Consumer<Class> autoTypeHandler = DEFAULT_AUTO_TYPE_HANDLER;
+    PropertyNamingStrategy namingStrategy;
 
     {
         long[] hashCodes;
@@ -666,13 +672,15 @@ public class ObjectReaderProvider
     }
 
     public void getBeanInfo(BeanInfo beanInfo, Class objectClass) {
-        for (ObjectReaderModule module : modules) {
+        for (int i = 0; i < modules.size(); i++) {
+            ObjectReaderModule module = modules.get(i);
             module.getBeanInfo(beanInfo, objectClass);
         }
     }
 
     public void getFieldInfo(FieldInfo fieldInfo, Class objectClass, Field field) {
-        for (ObjectReaderModule module : modules) {
+        for (int i = 0; i < modules.size(); i++) {
+            ObjectReaderModule module = modules.get(i);
             module.getFieldInfo(fieldInfo, objectClass, field);
         }
     }
@@ -817,36 +825,6 @@ public class ObjectReaderProvider
             if ("com.google.common.collect.ArrayListMultimap".equals(className)) {
                 objectReader = ObjectReaderImplMap.of(null, objectClass, 0);
             }
-        }
-
-        if (objectReader == null) {
-            boolean jsonCompiled = false;
-            Annotation[] annotations = objectClass.getAnnotations();
-            for (Annotation annotation : annotations) {
-                Class<? extends Annotation> annotationType = annotation.annotationType();
-                jsonCompiled = "com.alibaba.fastjson2.annotation.JSONCompiled".equals(annotationType.getName());
-            }
-            if (jsonCompiled) {
-                String codeGenClassName = objectClass.getName() + "_FASTJOSNReader";
-                ClassLoader classLoader = objectClass.getClassLoader();
-                if (classLoader == null) {
-                    classLoader = Thread.currentThread().getContextClassLoader();
-                }
-                if (classLoader == null) {
-                    classLoader = this.getClass().getClassLoader();
-                }
-
-                try {
-                    Class<?> loadedClass = classLoader.loadClass(codeGenClassName);
-                    if (ObjectReader.class.isAssignableFrom(loadedClass)) {
-                        objectReader = (ObjectReader) loadedClass.newInstance();
-                    }
-                } catch (Exception ignored) {
-                    // ignored
-                }
-            }
-
-            // objectClass.getResource(objectClass.)
         }
 
         if (objectReader == null) {
@@ -1010,5 +988,59 @@ public class ObjectReaderProvider
                 supplier,
                 fieldReaders
         );
+    }
+
+    public boolean isDisableReferenceDetect() {
+        return disableReferenceDetect;
+    }
+
+    public boolean isDisableAutoType() {
+        return disableAutoType;
+    }
+
+    public boolean isDisableJSONB() {
+        return disableJSONB;
+    }
+
+    public boolean isDisableArrayMapping() {
+        return disableArrayMapping;
+    }
+
+    public void setDisableReferenceDetect(boolean disableReferenceDetect) {
+        this.disableReferenceDetect = disableReferenceDetect;
+    }
+
+    public void setDisableArrayMapping(boolean disableArrayMapping) {
+        this.disableArrayMapping = disableArrayMapping;
+    }
+
+    public void setDisableJSONB(boolean disableJSONB) {
+        this.disableJSONB = disableJSONB;
+    }
+
+    public void setDisableAutoType(boolean disableAutoType) {
+        this.disableAutoType = disableAutoType;
+    }
+
+    public boolean isDisableSmartMatch() {
+        return disableSmartMatch;
+    }
+
+    public void setDisableSmartMatch(boolean disableSmartMatch) {
+        this.disableSmartMatch = disableSmartMatch;
+    }
+
+    /**
+     * @since 2.0.52
+     */
+    public PropertyNamingStrategy getNamingStrategy() {
+        return namingStrategy;
+    }
+
+    /**
+     * @since 2.0.52
+     */
+    public void setNamingStrategy(PropertyNamingStrategy namingStrategy) {
+        this.namingStrategy = namingStrategy;
     }
 }

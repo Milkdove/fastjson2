@@ -1,5 +1,6 @@
 package com.alibaba.fastjson2;
 
+import com.alibaba.fastjson2.util.JDKUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -1529,8 +1530,8 @@ public class JSONWriterTest {
     @Test
     public void test_writeStringUTF16_browserSecure() {
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("中<", "\"中\\u003c\"");
-        map.put("中>", "\"中\\u003e\"");
+        map.put("中<", "\"中\\u003C\"");
+        map.put("中>", "\"中\\u003E\"");
         map.put("中(", "\"中\\u0028\"");
         map.put("中)", "\"中\\u0029\"");
         map.put("中\r)", "\"中\\r\\u0029\"");
@@ -1553,9 +1554,9 @@ public class JSONWriterTest {
     @Test
     public void test_writeStringUTF16_EscapeNoneAscii() {
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("中\r中", "\"\\u4e2d\\r\\u4e2d\"");
-        map.put("\uD83D\uDC81\uD83D\uDC4C\uD83C\uDF8D\uD83D\uDE0D", "\"\\ud83d\\udc81\\ud83d\\udc4c\\ud83c\\udf8d\\ud83d\\ude0d\"");
-        map.put("中", "\"\\u4e2d\"");
+        map.put("中\r中", "\"\\u4E2D\\r\\u4E2D\"");
+        map.put("\uD83D\uDC81\uD83D\uDC4C\uD83C\uDF8D\uD83D\uDE0D", "\"\\uD83D\\uDC81\\uD83D\\uDC4C\\uD83C\\uDF8D\\uD83D\\uDE0D\"");
+        map.put("中", "\"\\u4E2D\"");
 
         map.forEach((k, v) -> {
             byte[] bytes = k.getBytes(StandardCharsets.UTF_16LE);
@@ -1575,9 +1576,9 @@ public class JSONWriterTest {
     @Test
     public void test_writeString_chars_EscapeNoneAscii_2() {
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("\uD83D\uDC81\uD83D\uDC4C\uD83C\uDF8D\uD83D\uDE0D", "\"\\ud83d\\udc81\\ud83d\\udc4c\\ud83c\\udf8d\\ud83d\\ude0d\"");
-        map.put("中\r中", "\"\\u4e2d\\r\\u4e2d\"");
-        map.put("中", "\"\\u4e2d\"");
+        map.put("\uD83D\uDC81\uD83D\uDC4C\uD83C\uDF8D\uD83D\uDE0D", "\"\\uD83D\\uDC81\\uD83D\\uDC4C\\uD83C\\uDF8D\\uD83D\\uDE0D\"");
+        map.put("中\r中", "\"\\u4E2D\\r\\u4E2D\"");
+        map.put("中", "\"\\u4E2D\"");
 
         map.forEach((k, v) -> {
             char[] chars = k.toCharArray();
@@ -1683,8 +1684,8 @@ public class JSONWriterTest {
     @Test
     public void test_writeStringLatin1_BrowserSecure() {
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("abc<abc", "\"abc\\u003cabc\"");
-        map.put("abc>abc", "\"abc\\u003eabc\"");
+        map.put("abc<abc", "\"abc\\u003Cabc\"");
+        map.put("abc>abc", "\"abc\\u003Eabc\"");
         map.put("abc(abc", "\"abc\\u0028abc\"");
         map.put("abc)abc", "\"abc\\u0029abc\"");
 
@@ -2245,28 +2246,6 @@ public class JSONWriterTest {
     }
 
     @Test
-    public void test8() {
-        assertFalse(JSONWriter.of().hasFilter());
-
-        JSONWriter jsonWriter = JSONWriter.ofUTF16();
-        assertThrows(JSONException.class, () -> jsonWriter.writeName2Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName3Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName4Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName5Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName6Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName7Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName8Raw(1L));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName9Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName10Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName11Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName12Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName13Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName14Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName15Raw(1L, 1));
-        assertThrows(JSONException.class, () -> jsonWriter.writeName16Raw(1L, 1));
-    }
-
-    @Test
     public void test9() {
         {
             JSONWriter jsonWriter = JSONWriter.of();
@@ -2391,5 +2370,497 @@ public class JSONWriterTest {
                 assertEquals(Short.toString(value), jsonWriter.toString());
             }
         }
+    }
+
+    @Test
+    public void writeName2Raw() {
+        String name = "id";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName2Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName2Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName3Raw() {
+        String name = "x23";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName3Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName3Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName4Raw() {
+        String name = "x234";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName4Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName4Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName5Raw() {
+        String name = "x2345";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName5Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName5Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName6Raw() {
+        String name = "x23456";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName6Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName6Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName6Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName6Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName7Raw() {
+        String name = "x234567";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName7Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName7Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName7Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName7Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName8Raw() {
+        String name = "x2345678";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = name.getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(Arrays.copyOf(bytes, 8), JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName8Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName8Raw(nameValue);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName8Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName8Raw(nameValue);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName9Raw() {
+        String name = "x23456789";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        int nameValue1 = JDKUtils.UNSAFE.getInt(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName9Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName9Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName9Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName9Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName10Raw() {
+        String name = "x234567890";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName10Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName10Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName10Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName10Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName11Raw() {
+        String name = "x2345678901";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName11Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName11Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName11Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName11Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName12Raw() {
+        String name = "x23456789012";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName12Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName12Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName12Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName12Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName13Raw() {
+        String name = "x234567890123";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName13Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName13Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName13Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName13Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName14Raw() {
+        String name = "x2345678901234";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName14Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName14Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName14Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName14Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName15Raw() {
+        String name = "x23456789012345";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes = expect.substring(1).getBytes(StandardCharsets.UTF_8);
+        byte[] bytes16 = Arrays.copyOf(bytes, 16);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName15Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName15Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName15Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName15Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void writeName16Raw() {
+        String name = "x234567890123456";
+        String expect = "{\"" + name + "\":";
+        byte[] bytes16 = name.getBytes(StandardCharsets.UTF_8);
+        long nameValue = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET);
+        long nameValue1 = JDKUtils.UNSAFE.getLong(bytes16, JDKUtils.ARRAY_BYTE_BASE_OFFSET + 8);
+
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8();
+            jsonWriter.startObject();
+            jsonWriter.writeName16Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16();
+            jsonWriter.startObject();
+            jsonWriter.writeName16Raw(nameValue, nameValue1);
+            assertEquals(expect, jsonWriter.toString());
+        }
+
+        String expect_pretty = "{\n\t\"" + name + "\":";
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF8(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName16Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+        {
+            JSONWriter jsonWriter = JSONWriter.ofUTF16(PrettyFormat);
+            jsonWriter.startObject();
+            jsonWriter.writeName16Raw(nameValue, nameValue1);
+            assertEquals(expect_pretty, jsonWriter.toString());
+        }
+    }
+
+    @Test
+    public void setFeatures() {
+        JSONWriter.Context context = JSONFactory.createWriteContext();
+        long features = 123456L;
+        context.setFeatures(features);
+        assertEquals(features, context.getFeatures());
     }
 }

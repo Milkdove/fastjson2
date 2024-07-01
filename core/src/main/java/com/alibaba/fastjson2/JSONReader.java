@@ -28,10 +28,11 @@ import static com.alibaba.fastjson2.JSONFactory.*;
 import static com.alibaba.fastjson2.JSONReader.BigIntegerCreator.BIG_INTEGER_CREATOR;
 import static com.alibaba.fastjson2.util.JDKUtils.*;
 import static com.alibaba.fastjson2.util.TypeUtils.toBigDecimal;
+import static com.alibaba.fastjson2.util.TypeUtils.toDate;
 
 public abstract class JSONReader
         implements Closeable {
-    static final int MAX_EXP = 1023;
+    static final int MAX_EXP = 2047;
 
     static final byte JSON_TYPE_INT = 1;
     static final byte JSON_TYPE_DEC = 2;
@@ -397,7 +398,7 @@ public abstract class JSONReader
     }
 
     public final ObjectReader getObjectReader(Type type) {
-        boolean fieldBased = (context.features & JSONReader.Feature.FieldBased.mask) != 0;
+        boolean fieldBased = (context.features & Feature.FieldBased.mask) != 0;
         return context.provider.getObjectReader(type, fieldBased);
     }
 
@@ -522,6 +523,10 @@ public abstract class JSONReader
     public abstract String readReference();
 
     public boolean readReference(List list, int i) {
+        return readReference((Collection) list, i);
+    }
+
+    public boolean readReference(Collection list, int i) {
         if (!isReference()) {
             return false;
         }
@@ -752,6 +757,8 @@ public abstract class JSONReader
         throw new JSONException("UnsupportedOperation");
     }
 
+    public abstract boolean nextIfMatchIdent(char c0, char c1);
+
     public abstract boolean nextIfMatchIdent(char c0, char c1, char c2);
 
     public abstract boolean nextIfMatchIdent(char c0, char c1, char c2, char c3);
@@ -805,8 +812,12 @@ public abstract class JSONReader
                     return (int) longValue;
                 }
                 if (number instanceof BigInteger) {
+                    BigInteger bigInt = (BigInteger) number;
+                    if ((context.features & Feature.NonErrorOnNumberOverflow.mask) != 0) {
+                        return bigInt.intValue();
+                    }
                     try {
-                        return ((BigInteger) number).intValueExact();
+                        return bigInt.intValueExact();
                     } catch (ArithmeticException e) {
                         throw numberError();
                     }
@@ -833,8 +844,17 @@ public abstract class JSONReader
             }
             case JSON_TYPE_INT64:
             case JSON_TYPE_FLOAT:
-            case JSON_TYPE_DOUBLE:
-                return getNumber().intValue();
+            case JSON_TYPE_DOUBLE: {
+                Number num = getNumber();
+                long int64 = num.longValue();
+                if ((int64 < Integer.MIN_VALUE || int64 > Integer.MAX_VALUE)
+                        && (context.features & Feature.NonErrorOnNumberOverflow.mask) == 0
+                ) {
+                    throw new JSONException(info("integer overflow " + int64));
+                }
+                return (int) int64;
+                //if ((context.features & Feature.NonErrorOnNumberOverflow.mask) != 0) {
+            }
             case JSON_TYPE_BIG_DEC:
                 try {
                     return getBigDecimal()
@@ -860,8 +880,12 @@ public abstract class JSONReader
                 }
                 Number number = getNumber();
                 if (number instanceof BigInteger) {
+                    BigInteger bigInt = (BigInteger) number;
+                    if ((context.features & Feature.NonErrorOnNumberOverflow.mask) != 0) {
+                        return bigInt.longValue();
+                    }
                     try {
-                        return ((BigInteger) number).longValueExact();
+                        return bigInt.longValueExact();
                     } catch (ArithmeticException e) {
                         throw numberError();
                     }
@@ -1080,6 +1104,14 @@ public abstract class JSONReader
             Instant instant = Instant.ofEpochMilli(millis);
             ZonedDateTime zdt = instant.atZone(context.getZoneId());
             return zdt.toLocalDateTime();
+        }
+
+        if (isTypeRedirect() && nextIfMatchIdent('"', 'v', 'a', 'l', '"')) {
+            nextIfMatch(':');
+            LocalDateTime dateTime = readLocalDateTime();
+            nextIfObjectEnd();
+            setTypeRedirect(false);
+            return dateTime;
         }
 
         if (context.dateFormat == null
@@ -1359,12 +1391,23 @@ public abstract class JSONReader
             return null;
         }
 
+        if (current() == 'n') {
+            return readNullOrNewDate();
+        }
+
         long millis;
         if (isTypeRedirect() && nextIfMatchIdent('"', 'v', 'a', 'l', '"')) {
             nextIfMatch(':');
             millis = readInt64Value();
             nextIfObjectEnd();
             setTypeRedirect(false);
+        } else if (isObject()) {
+            JSONObject object = readJSONObject();
+            Object date = object.get("$date");
+            if (date instanceof String) {
+                return DateUtils.parseDate((String) date, context.getZoneId());
+            }
+            return toDate(object);
         } else {
             millis = readMillisFromString();
         }
@@ -1392,6 +1435,10 @@ public abstract class JSONReader
         switch (len) {
             case 5:
                 return readLocalTime5();
+            case 6:
+                return readLocalTime6();
+            case 7:
+                return readLocalTime7();
             case 8:
                 return readLocalTime8();
             case 9:
@@ -1430,6 +1477,10 @@ public abstract class JSONReader
     }
 
     protected abstract int getStringLength();
+
+    public boolean isDate() {
+        return false;
+    }
 
     public Instant readInstant() {
         if (nextIfNull()) {
@@ -1596,7 +1647,18 @@ public abstract class JSONReader
                     return Long.parseLong(str);
                 }
 
-                return DateUtils.parseMillis19(str, null);
+                return DateUtils.parseMillis19(str, context.getZoneId());
+            }
+
+            if ("yyyy-MM-dd HH:mm:ss.SSS".equals(format)
+                    && str.length() == 19
+                    && str.charAt(4) == '-'
+                    && str.charAt(7) == '-'
+                    && str.charAt(10) == ' '
+                    && str.charAt(13) == ':'
+                    && str.charAt(16) == ':'
+            ) {
+                return DateUtils.parseMillis19(str, context.getZoneId());
             }
 
             SimpleDateFormat utilFormat = new SimpleDateFormat(format);
@@ -1649,6 +1711,10 @@ public abstract class JSONReader
     protected abstract LocalDateTime readLocalDateTimeX(int len);
 
     protected abstract LocalTime readLocalTime5();
+
+    protected abstract LocalTime readLocalTime6();
+
+    protected abstract LocalTime readLocalTime7();
 
     protected abstract LocalTime readLocalTime8();
 
@@ -1885,7 +1951,7 @@ public abstract class JSONReader
 
             Object origin = map.put(name, value);
             if (origin != null) {
-                if ((contextFeatures & JSONReader.Feature.DuplicateKeyValueAsArray.mask) != 0) {
+                if ((contextFeatures & Feature.DuplicateKeyValueAsArray.mask) != 0) {
                     if (origin instanceof Collection) {
                         ((Collection) origin).add(value);
                         map.put(name, origin);
@@ -1901,6 +1967,19 @@ public abstract class JSONReader
     }
 
     public void read(Map object, long features) {
+        if ((ch == '"' || ch == '\'') && !typeRedirect) {
+            String str = readString();
+            if (str.isEmpty()) {
+                return;
+            }
+            if (str.charAt(0) == '{') {
+                try (JSONReader jsonReader = JSONReader.of(str, context)) {
+                    jsonReader.readObject(object, features);
+                    return;
+                }
+            }
+        }
+
         boolean match = nextIfObjectStart();
         boolean typeRedirect = false;
         if (!match) {
@@ -1941,7 +2020,7 @@ public abstract class JSONReader
 
             Object name;
             if (match || typeRedirect) {
-                if (ch >= '1' && ch <= '9') {
+                if ((ch >= '0' && ch <= '9') || ch == '-') {
                     name = null;
                 } else {
                     name = readFieldName();
@@ -2063,9 +2142,17 @@ public abstract class JSONReader
                 continue;
             }
 
+            if (i == 0
+                    && (contextFeatures & Feature.SupportAutoType.mask) != 0
+                    && name.equals("@type")
+                    && object.getClass().getName().equals(value)
+            ) {
+                continue;
+            }
+
             Object origin = map.put(name, value);
             if (origin != null) {
-                if ((contextFeatures & JSONReader.Feature.DuplicateKeyValueAsArray.mask) != 0) {
+                if ((contextFeatures & Feature.DuplicateKeyValueAsArray.mask) != 0) {
                     if (origin instanceof Collection) {
                         ((Collection) origin).add(value);
                         map.put(name, origin);
@@ -2121,7 +2208,7 @@ public abstract class JSONReader
 
             Object origin = object.put(name, value);
             if (origin != null) {
-                if ((contextFeatures & JSONReader.Feature.DuplicateKeyValueAsArray.mask) != 0) {
+                if ((contextFeatures & Feature.DuplicateKeyValueAsArray.mask) != 0) {
                     if (origin instanceof Collection) {
                         ((Collection) origin).add(value);
                         object.put(name, origin);
@@ -2207,7 +2294,12 @@ public abstract class JSONReader
                     val = readArray();
                     break;
                 case '{':
-                    val = readObject();
+                    if (isReference()) {
+                        addResolveTask(object, name, JSONPath.of(readReference()));
+                        val = null;
+                    } else {
+                        val = readObject();
+                    }
                     break;
                 case '"':
                 case '\'':
@@ -2247,7 +2339,7 @@ public abstract class JSONReader
 
             Object origin = object.put(name, val);
             if (origin != null) {
-                if ((context.features & JSONReader.Feature.DuplicateKeyValueAsArray.mask) != 0) {
+                if ((context.features & Feature.DuplicateKeyValueAsArray.mask) != 0) {
                     if (origin instanceof Collection) {
                         ((Collection) origin).add(val);
                         object.put(name, origin);
@@ -2293,21 +2385,27 @@ public abstract class JSONReader
             return null;
         }
 
-        if (!nextIfArrayStart()) {
-            throw new JSONException(info("syntax error : " + ch));
-        }
-
-        boolean fieldBased = (context.features & Feature.FieldBased.mask) != 0;
-        ObjectReader objectReader = context.provider.getObjectReader(itemType, fieldBased);
-
         List list = new ArrayList();
-        for (Object item; !nextIfArrayEnd(); list.add(item)) {
-            int mark = offset;
-            item = objectReader.readObject(this, null, null, 0);
+        if (ch == '[') {
+            next();
 
-            if (mark == offset || ch == '}' || ch == EOI) {
-                throw new JSONException("illegal input : " + ch + ", offset " + getOffset());
+            boolean fieldBased = (context.features & Feature.FieldBased.mask) != 0;
+            ObjectReader objectReader = context.provider.getObjectReader(itemType, fieldBased);
+            for (Object item; !nextIfArrayEnd(); list.add(item)) {
+                int mark = offset;
+                item = objectReader.readObject(this, null, null, 0);
+
+                if (mark == offset || ch == '}' || ch == EOI) {
+                    throw new JSONException("illegal input : " + ch + ", offset " + getOffset());
+                }
             }
+        } else if (ch == '"' || ch == '\'' || ch == '{') {
+            String str = readString();
+            if (str != null && !str.isEmpty()) {
+                list.add(str);
+            }
+        } else {
+            throw new JSONException(info("syntax error"));
         }
 
         if (comma = (ch == ',')) {
@@ -2681,22 +2779,39 @@ public abstract class JSONReader
             case JSON_TYPE_INT:
             case JSON_TYPE_INT64: {
                 if (mag0 == 0 && mag1 == 0 && mag2 == 0 && mag3 != Integer.MIN_VALUE) {
-                    int intVlaue;
+                    int intValue;
                     if (negative) {
                         if (mag3 < 0) {
-                            return -(mag3 & 0xFFFFFFFFL);
+                            long longValue = -(mag3 & 0xFFFFFFFFL);
+                            if ((context.features & Feature.UseBigIntegerForInts.mask) != 0) {
+                                return BigInteger.valueOf(longValue);
+                            }
+                            return longValue;
                         }
-                        intVlaue = -mag3;
+                        intValue = -mag3;
                     } else {
                         if (mag3 < 0) {
-                            return mag3 & 0xFFFFFFFFL;
+                            long longValue = mag3 & 0xFFFFFFFFL;
+                            if ((context.features & Feature.UseBigIntegerForInts.mask) != 0) {
+                                return BigInteger.valueOf(longValue);
+                            }
+                            return longValue;
                         }
-                        intVlaue = mag3;
+                        intValue = mag3;
                     }
+
+                    if ((context.features & Feature.UseBigIntegerForInts.mask) != 0) {
+                        return BigInteger.valueOf(intValue);
+                    }
+
+                    if ((context.features & Feature.UseLongForInts.mask) != 0) {
+                        return Long.valueOf(intValue);
+                    }
+
                     if (valueType == JSON_TYPE_INT64) {
-                        return (long) intVlaue;
+                        return (long) intValue;
                     }
-                    return intVlaue;
+                    return intValue;
                 }
                 int[] mag;
                 if (mag0 == 0) {
@@ -2706,7 +2821,11 @@ public abstract class JSONReader
 
                         if (v2 <= Integer.MAX_VALUE) {
                             long v23 = (v2 << 32) + (v3);
-                            return negative ? -v23 : v23;
+                            long longValue = negative ? -v23 : v23;
+                            if ((context.features & Feature.UseBigIntegerForInts.mask) != 0) {
+                                return BigInteger.valueOf(longValue);
+                            }
+                            return longValue;
                         }
                         mag = new int[]{mag2, mag3};
                     } else {
@@ -2717,7 +2836,11 @@ public abstract class JSONReader
                 }
 
                 int signum = negative ? -1 : 1;
-                return BIG_INTEGER_CREATOR.apply(signum, mag);
+                BigInteger integer = BIG_INTEGER_CREATOR.apply(signum, mag);
+                if ((context.features & Feature.UseLongForInts.mask) != 0) {
+                    return integer.longValue();
+                }
+                return integer;
             }
             case JSON_TYPE_INT16: {
                 if (mag0 == 0 && mag1 == 0 && mag2 == 0 && mag3 >= 0) {
@@ -2956,15 +3079,17 @@ public abstract class JSONReader
     public abstract void close();
 
     protected final int toInt32(String val) {
-        if (IOUtils.isNumber(val)) {
-            return Integer.parseInt(val);
+        if (IOUtils.isNumber(val) || val.lastIndexOf(',') == val.length() - 4) {
+            return TypeUtils.toIntValue(val);
         }
+
         throw new JSONException("parseInt error, value : " + val);
     }
 
     protected final long toInt64(String val) {
-        if (IOUtils.isNumber(val)) {
-            return Long.parseLong(val);
+        if (IOUtils.isNumber(val)
+                || val.lastIndexOf(',') == val.length() - 4) {
+            return TypeUtils.toLongValue(val);
         }
 
         if (val.length() > 10 && val.length() < 40) {
@@ -3070,7 +3195,7 @@ public abstract class JSONReader
     }
 
     @Deprecated
-    public static JSONReader of(JSONReader.Context context, byte[] utf8Bytes) {
+    public static JSONReader of(Context context, byte[] utf8Bytes) {
         boolean ascii = false;
         if (PREDICATE_IS_ASCII != null) {
             ascii = PREDICATE_IS_ASCII.test(utf8Bytes);
@@ -3091,7 +3216,7 @@ public abstract class JSONReader
         }
     }
 
-    public static JSONReader of(byte[] utf8Bytes, JSONReader.Context context) {
+    public static JSONReader of(byte[] utf8Bytes, Context context) {
         boolean ascii = false;
         if (PREDICATE_IS_ASCII != null) {
             ascii = PREDICATE_IS_ASCII.test(utf8Bytes);
@@ -3171,7 +3296,7 @@ public abstract class JSONReader
     }
 
     @Deprecated
-    public static JSONReader ofJSONB(JSONReader.Context context, byte[] jsonbBytes) {
+    public static JSONReader ofJSONB(Context context, byte[] jsonbBytes) {
         return new JSONReaderJSONB(
                 context,
                 jsonbBytes,
@@ -3179,7 +3304,7 @@ public abstract class JSONReader
                 jsonbBytes.length);
     }
 
-    public static JSONReader ofJSONB(byte[] jsonbBytes, JSONReader.Context context) {
+    public static JSONReader ofJSONB(byte[] jsonbBytes, Context context) {
         return new JSONReaderJSONB(
                 context,
                 jsonbBytes,
@@ -3187,7 +3312,11 @@ public abstract class JSONReader
                 jsonbBytes.length);
     }
 
-    public static JSONReader ofJSONB(byte[] jsonbBytes, JSONReader.Feature... features) {
+    public static JSONReader ofJSONB(InputStream in, Context context) {
+        return new JSONReaderJSONB(context, in);
+    }
+
+    public static JSONReader ofJSONB(byte[] jsonbBytes, Feature... features) {
         Context context = JSONFactory.createReadContext();
         context.config(features);
         return new JSONReaderJSONB(
@@ -3368,14 +3497,14 @@ public abstract class JSONReader
         return JSONReader.of(new InputStreamReader(is, charset), context);
     }
 
-    public static JSONReader of(java.io.Reader is) {
+    public static JSONReader of(Reader is) {
         return new JSONReaderUTF16(
                 JSONFactory.createReadContext(),
                 is
         );
     }
 
-    public static JSONReader of(java.io.Reader is, Context context) {
+    public static JSONReader of(Reader is, Context context) {
         return new JSONReaderUTF16(
                 context,
                 is
@@ -4234,6 +4363,13 @@ public abstract class JSONReader
             return features;
         }
 
+        /**
+         * @since 2.0.51
+         */
+        public void setFeatures(long features) {
+            this.features = features;
+        }
+
         public void setZoneId(ZoneId zoneId) {
             this.zoneId = zoneId;
         }
@@ -4409,7 +4545,59 @@ public abstract class JSONReader
         /**
          * @since 2.0.42
          */
-        ErrorOnUnknownProperties(1 << 26);
+        ErrorOnUnknownProperties(1 << 26),
+
+        /**
+         * empty string "" convert to null
+         *
+         * @since 2.0.48
+         */
+        EmptyStringAsNull(1 << 27),
+
+        /**
+         * @since 2.0.48
+         */
+        NonErrorOnNumberOverflow(1 << 28),
+
+        /**
+         * Feature that determines whether JSON integral (non-floating-point)
+         * numbers are to be deserialized into {@link java.math.BigInteger}s
+         * if only generic type description (either {@link Object} or
+         * {@link Number}, or within untyped {@link java.util.Map}
+         * or {@link java.util.Collection} context) is available.
+         * If enabled such values will be deserialized as
+         * {@link java.math.BigInteger}s;
+         * if disabled, will be deserialized as "smallest" available type,
+         * which is either {@link Integer}, {@link Long} or
+         * {@link java.math.BigInteger}, depending on number of digits.
+         * <p>
+         * Feature is disabled by default, meaning that "untyped" integral
+         * numbers will by default be deserialized using whatever
+         * is the most compact integral type, to optimize efficiency.
+         * @since 2.0.51
+         */
+        UseBigIntegerForInts(1 << 29),
+
+        /**
+         * Feature that determines how "small" JSON integral (non-floating-point)
+         * numbers -- ones that fit in 32-bit signed integer (`int`) -- are bound
+         * when target type is loosely typed as {@link Object} or {@link Number}
+         * (or within untyped {@link java.util.Map} or {@link java.util.Collection} context).
+         * If enabled, such values will be deserialized as {@link java.lang.Long};
+         * if disabled, they will be deserialized as "smallest" available type,
+         * {@link Integer}.
+         *<p>
+         * Note: if {@link #UseBigIntegerForInts} is enabled, it has precedence
+         * over this setting, forcing use of {@link java.math.BigInteger} for all
+         * integral values.
+         *<p>
+         * Feature is disabled by default, meaning that "untyped" integral
+         * numbers will by default be deserialized using {@link java.lang.Integer}
+         * if value fits.
+         *
+         * @since 2.0.51
+         */
+        UseLongForInts(1 << 30);
 
         public final long mask;
 
@@ -4429,6 +4617,14 @@ public abstract class JSONReader
             }
 
             return value;
+        }
+
+        public boolean isEnabled(long features) {
+            return (features & mask) != 0;
+        }
+
+        public static boolean isEnabled(long features, Feature feature) {
+            return (features & feature.mask) != 0;
         }
     }
 

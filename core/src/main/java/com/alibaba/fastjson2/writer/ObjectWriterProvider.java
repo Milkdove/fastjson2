@@ -42,7 +42,13 @@ public class ObjectWriterProvider
     final List<ObjectWriterModule> modules = new ArrayList<>();
     PropertyNamingStrategy namingStrategy;
 
+    boolean disableReferenceDetect = JSONFactory.isDisableReferenceDetect();
+    boolean disableArrayMapping = JSONFactory.isDisableArrayMapping();
+    boolean disableJSONB = JSONFactory.isDisableJSONB();
+    boolean disableAutoType = JSONFactory.isDisableAutoType();
+
     volatile long userDefineMask;
+    boolean alphabetic = JSONFactory.isDefaultWriterAlphabetic();
 
     public ObjectWriterProvider() {
         this((PropertyNamingStrategy) null);
@@ -352,14 +358,18 @@ public class ObjectWriterProvider
                     && superclass != Object.class
                     && "com.google.protobuf.GeneratedMessageV3".equals(superclass.getName())) {
                 fieldBased = false;
-            }
-            switch (className) {
-                case "springfox.documentation.spring.web.json.Json":
-                case "cn.hutool.json.JSONArray":
-                    fieldBased = false;
-                    break;
-                default:
-                    break;
+            } else {
+                switch (className) {
+                    case "springfox.documentation.spring.web.json.Json":
+                    case "cn.hutool.json.JSONArray":
+                    case "cn.hutool.json.JSONObject":
+                    case "cn.hutool.core.map.CaseInsensitiveMap":
+                    case "cn.hutool.core.map.CaseInsensitiveLinkedMap":
+                        fieldBased = false;
+                        break;
+                    default:
+                        break;
+                }
             }
         } else {
             switch (className) {
@@ -603,5 +613,45 @@ public class ObjectWriterProvider
         );
 
         BeanUtils.cleanupCache(classLoader);
+    }
+
+    public boolean isDisableReferenceDetect() {
+        return disableReferenceDetect;
+    }
+
+    public boolean isDisableAutoType() {
+        return disableAutoType;
+    }
+
+    public boolean isDisableJSONB() {
+        return disableJSONB;
+    }
+
+    public boolean isDisableArrayMapping() {
+        return disableArrayMapping;
+    }
+
+    public void setDisableReferenceDetect(boolean disableReferenceDetect) {
+        this.disableReferenceDetect = disableReferenceDetect;
+    }
+
+    public void setDisableArrayMapping(boolean disableArrayMapping) {
+        this.disableArrayMapping = disableArrayMapping;
+    }
+
+    public void setDisableJSONB(boolean disableJSONB) {
+        this.disableJSONB = disableJSONB;
+    }
+
+    public void setDisableAutoType(boolean disableAutoType) {
+        this.disableAutoType = disableAutoType;
+    }
+
+    public boolean isAlphabetic() {
+        return alphabetic;
+    }
+
+    protected BeanInfo createBeanInfo() {
+        return new BeanInfo(this);
     }
 }

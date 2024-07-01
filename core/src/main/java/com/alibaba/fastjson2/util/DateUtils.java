@@ -305,11 +305,18 @@ public class DateUtils {
         byte c4 = bytes[off + 4];
 
         byte h0, h1, i0, i1;
+        int second = 0;
         if (c2 == ':') {
             h0 = c0;
             h1 = c1;
             i0 = c3;
             i1 = c4;
+        } else if (c1 == ':' && c3 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = '0';
+            i1 = c2;
+            second = c4 - '0';
         } else {
             return null;
         }
@@ -332,7 +339,7 @@ public class DateUtils {
             return null;
         }
 
-        return LocalTime.of(hour, minute);
+        return LocalTime.of(hour, minute, second);
     }
 
     public static LocalTime parseLocalTime5(char[] chars, int off) {
@@ -347,11 +354,18 @@ public class DateUtils {
         char c4 = chars[off + 4];
 
         char h0, h1, i0, i1;
+        int second = 0;
         if (c2 == ':') {
             h0 = c0;
             h1 = c1;
             i0 = c3;
             i1 = c4;
+        } else if (c1 == ':' && c3 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = '0';
+            i1 = c2;
+            second = c4 - '0';
         } else {
             return null;
         }
@@ -374,7 +388,281 @@ public class DateUtils {
             return null;
         }
 
-        return LocalTime.of(hour, minute);
+        return LocalTime.of(hour, minute, second);
+    }
+
+    public static LocalTime parseLocalTime6(byte[] bytes, int off) {
+        if (off + 5 > bytes.length) {
+            return null;
+        }
+
+        byte c0 = bytes[off];
+        byte c1 = bytes[off + 1];
+        byte c2 = bytes[off + 2];
+        byte c3 = bytes[off + 3];
+        byte c4 = bytes[off + 4];
+        byte c5 = bytes[off + 5];
+
+        byte h0, h1, i0, i1, s0, s1;
+        if (c2 == ':' && c4 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = '0';
+            i1 = c3;
+            s0 = '0';
+            s1 = c5;
+        } else if (c1 == ':' && c4 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = c2;
+            i1 = c3;
+            s0 = '0';
+            s1 = c5;
+        } else if (c1 == ':' && c3 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = '0';
+            i1 = c2;
+            s0 = c4;
+            s1 = c5;
+        } else {
+            return null;
+        }
+
+        int hour;
+        if (h0 >= '0' && h0 <= '9'
+                && h1 >= '0' && h1 <= '9'
+        ) {
+            hour = (h0 - '0') * 10 + (h1 - '0');
+        } else {
+            return null;
+        }
+
+        int minute;
+        if (i0 >= '0' && i0 <= '9'
+                && i1 >= '0' && i1 <= '9'
+        ) {
+            minute = (i0 - '0') * 10 + (i1 - '0');
+        } else {
+            return null;
+        }
+
+        int second;
+        if (s0 >= '0' && s0 <= '9'
+                && s1 >= '0' && s1 <= '9'
+        ) {
+            second = (s0 - '0') * 10 + (s1 - '0');
+        } else {
+            return null;
+        }
+
+        return LocalTime.of(hour, minute, second);
+    }
+
+    public static LocalTime parseLocalTime6(char[] chars, int off) {
+        if (off + 5 > chars.length) {
+            return null;
+        }
+
+        char c0 = chars[off];
+        char c1 = chars[off + 1];
+        char c2 = chars[off + 2];
+        char c3 = chars[off + 3];
+        char c4 = chars[off + 4];
+        char c5 = chars[off + 5];
+
+        char h0, h1, i0, i1, s0, s1;
+        if (c2 == ':' && c4 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = '0';
+            i1 = c3;
+            s0 = '0';
+            s1 = c5;
+        } else if (c1 == ':' && c4 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = c2;
+            i1 = c3;
+            s0 = '0';
+            s1 = c5;
+        } else if (c1 == ':' && c3 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = '0';
+            i1 = c2;
+            s0 = c4;
+            s1 = c5;
+        } else {
+            return null;
+        }
+
+        int hour;
+        if (h0 >= '0' && h0 <= '9'
+                && h1 >= '0' && h1 <= '9'
+        ) {
+            hour = (h0 - '0') * 10 + (h1 - '0');
+        } else {
+            return null;
+        }
+
+        int minute;
+        if (i0 >= '0' && i0 <= '9'
+                && i1 >= '0' && i1 <= '9'
+        ) {
+            minute = (i0 - '0') * 10 + (i1 - '0');
+        } else {
+            return null;
+        }
+
+        int second;
+        if (s0 >= '0' && s0 <= '9'
+                && s1 >= '0' && s1 <= '9'
+        ) {
+            second = (s0 - '0') * 10 + (s1 - '0');
+        } else {
+            return null;
+        }
+
+        return LocalTime.of(hour, minute, second);
+    }
+
+    public static LocalTime parseLocalTime7(byte[] bytes, int off) {
+        if (off + 5 > bytes.length) {
+            return null;
+        }
+
+        byte c0 = bytes[off];
+        byte c1 = bytes[off + 1];
+        byte c2 = bytes[off + 2];
+        byte c3 = bytes[off + 3];
+        byte c4 = bytes[off + 4];
+        byte c5 = bytes[off + 5];
+        byte c6 = bytes[off + 6];
+
+        byte h0, h1, i0, i1, s0, s1;
+        if (c1 == ':' && c4 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = c2;
+            i1 = c3;
+            s0 = c5;
+            s1 = c6;
+        } else if (c2 == ':' && c4 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = '0';
+            i1 = c3;
+            s0 = c5;
+            s1 = c6;
+        } else if (c2 == ':' && c5 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = c3;
+            i1 = c4;
+            s0 = '0';
+            s1 = c6;
+        } else {
+            return null;
+        }
+
+        int hour;
+        if (h0 >= '0' && h0 <= '9'
+                && h1 >= '0' && h1 <= '9'
+        ) {
+            hour = (h0 - '0') * 10 + (h1 - '0');
+        } else {
+            return null;
+        }
+
+        int minute;
+        if (i0 >= '0' && i0 <= '9'
+                && i1 >= '0' && i1 <= '9'
+        ) {
+            minute = (i0 - '0') * 10 + (i1 - '0');
+        } else {
+            return null;
+        }
+
+        int second;
+        if (s0 >= '0' && s0 <= '9'
+                && s1 >= '0' && s1 <= '9'
+        ) {
+            second = (s0 - '0') * 10 + (s1 - '0');
+        } else {
+            return null;
+        }
+
+        return LocalTime.of(hour, minute, second);
+    }
+
+    public static LocalTime parseLocalTime7(char[] chars, int off) {
+        if (off + 5 > chars.length) {
+            return null;
+        }
+
+        char c0 = chars[off];
+        char c1 = chars[off + 1];
+        char c2 = chars[off + 2];
+        char c3 = chars[off + 3];
+        char c4 = chars[off + 4];
+        char c5 = chars[off + 5];
+        char c6 = chars[off + 6];
+
+        char h0, h1, i0, i1, s0, s1;
+        if (c1 == ':' && c4 == ':') {
+            h0 = '0';
+            h1 = c0;
+            i0 = c2;
+            i1 = c3;
+            s0 = c5;
+            s1 = c6;
+        } else if (c2 == ':' && c4 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = '0';
+            i1 = c3;
+            s0 = c5;
+            s1 = c6;
+        } else if (c2 == ':' && c5 == ':') {
+            h0 = c0;
+            h1 = c1;
+            i0 = c3;
+            i1 = c4;
+            s0 = '0';
+            s1 = c6;
+        } else {
+            return null;
+        }
+
+        int hour;
+        if (h0 >= '0' && h0 <= '9'
+                && h1 >= '0' && h1 <= '9'
+        ) {
+            hour = (h0 - '0') * 10 + (h1 - '0');
+        } else {
+            return null;
+        }
+
+        int minute;
+        if (i0 >= '0' && i0 <= '9'
+                && i1 >= '0' && i1 <= '9'
+        ) {
+            minute = (i0 - '0') * 10 + (i1 - '0');
+        } else {
+            return null;
+        }
+
+        int second;
+        if (s0 >= '0' && s0 <= '9'
+                && s1 >= '0' && s1 <= '9'
+        ) {
+            second = (s0 - '0') * 10 + (s1 - '0');
+        } else {
+            return null;
+        }
+
+        return LocalTime.of(hour, minute, second);
     }
 
     public static LocalTime parseLocalTime8(byte[] bytes, int off) {
@@ -6449,6 +6737,48 @@ public class DateUtils {
             S7 = '0';
             S8 = '0';
             zoneIdBegin = 23;
+        } else if (len == 23
+                && c3 == ' ' && c5 == ',' && c6 == ' ' && c11 == ',' && c12 == ' '
+                && c14 == ':' && c17 == ':'
+                && c20 == ' ' && (c21 == 'A' || c21 == 'P') && c22 == 'M'
+        ) {
+            y0 = c7;
+            y1 = c8;
+            y2 = c9;
+            y3 = c10;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = '0';
+            d1 = c4;
+
+            h0 = '0';
+            h1 = c13;
+            pm = c21 == 'P';
+
+            i0 = c15;
+            i1 = c16;
+
+            s0 = c18;
+            s1 = c19;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 23;
         } else if (len == 24
                 && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ' '
                 && c15 == ':' && c18 == ':'
@@ -6470,6 +6800,90 @@ public class DateUtils {
 
             d0 = c4;
             d1 = c5;
+
+            h0 = c13;
+            h1 = c14;
+            pm = c22 == 'P';
+
+            i0 = c16;
+            i1 = c17;
+
+            s0 = c19;
+            s1 = c20;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 24;
+        } else if (len == 24
+                && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ',' && c13 == ' '
+                && c15 == ':' && c18 == ':'
+                && c21 == ' ' && (c22 == 'A' || c22 == 'P') && c23 == 'M'
+        ) {
+            y0 = c8;
+            y1 = c9;
+            y2 = c10;
+            y3 = c11;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = c4;
+            d1 = c5;
+
+            h0 = '0';
+            h1 = c14;
+            pm = c22 == 'P';
+
+            i0 = c16;
+            i1 = c17;
+
+            s0 = c19;
+            s1 = c20;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 24;
+        } else if (len == 24
+                && c3 == ' ' && c5 == ',' && c6 == ' ' && c11 == ',' && c12 == ' '
+                && c15 == ':' && c18 == ':'
+                && c21 == ' ' && (c22 == 'A' || c22 == 'P') && c23 == 'M'
+        ) {
+            y0 = c7;
+            y1 = c8;
+            y2 = c9;
+            y3 = c10;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = '0';
+            d1 = c4;
 
             h0 = c13;
             h1 = c14;
@@ -6595,6 +7009,48 @@ public class DateUtils {
             S8 = '0';
             zoneIdBegin = 25;
             isTimeZone = c25 == '|';
+        } else if (len == 25
+                && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ',' && c13 == ' '
+                && c16 == ':' && c19 == ':'
+                && c22 == ' ' && (c23 == 'A' || c23 == 'P') && c24 == 'M'
+        ) {
+            y0 = c8;
+            y1 = c9;
+            y2 = c10;
+            y3 = c11;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = c4;
+            d1 = c5;
+
+            h0 = c14;
+            h1 = c15;
+            pm = c23 == 'P';
+
+            i0 = c17;
+            i1 = c18;
+
+            s0 = c20;
+            s1 = c21;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 25;
         } else if (c4 == '-' && c7 == '-'
                 && (c10 == ' ' || c10 == 'T')
                 && c13 == ':' && c16 == ':' && c19 == '.'
@@ -6921,6 +7377,10 @@ public class DateUtils {
             return ZonedDateTime.parse(new String(str, off, len), formatter);
         } else {
             return null;
+        }
+
+        if (pm && h0 == '1' && h1 == '2') {
+            pm = false;
         }
 
         if (pm) {
@@ -7482,6 +7942,48 @@ public class DateUtils {
             S7 = '0';
             S8 = '0';
             zoneIdBegin = 23;
+        } else if (len == 23
+                && c3 == ' ' && c5 == ',' && c6 == ' ' && c11 == ',' && c12 == ' '
+                && c14 == ':' && c17 == ':'
+                && c20 == ' ' && (c21 == 'A' || c21 == 'P') && c22 == 'M'
+        ) {
+            y0 = c7;
+            y1 = c8;
+            y2 = c9;
+            y3 = c10;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = '0';
+            d1 = c4;
+
+            h0 = '0';
+            h1 = c13;
+            pm = c21 == 'P';
+
+            i0 = c15;
+            i1 = c16;
+
+            s0 = c18;
+            s1 = c19;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 23;
         } else if (len == 24
                 && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ' '
                 && c15 == ':' && c18 == ':'
@@ -7592,6 +8094,90 @@ public class DateUtils {
             S8 = '0';
             zoneIdBegin = 24;
             isTimeZone = c24 == '|';
+        } else if (len == 24
+                && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ',' && c13 == ' '
+                && c15 == ':' && c18 == ':'
+                && c21 == ' ' && (c22 == 'A' || c22 == 'P') && c23 == 'M'
+        ) {
+            y0 = c8;
+            y1 = c9;
+            y2 = c10;
+            y3 = c11;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = c4;
+            d1 = c5;
+
+            h0 = '0';
+            h1 = c14;
+            pm = c22 == 'P';
+
+            i0 = c16;
+            i1 = c17;
+
+            s0 = c19;
+            s1 = c20;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 24;
+        } else if (len == 24
+                && c3 == ' ' && c5 == ',' && c6 == ' ' && c11 == ',' && c12 == ' '
+                && c15 == ':' && c18 == ':'
+                && c21 == ' ' && (c22 == 'A' || c22 == 'P') && c23 == 'M'
+        ) {
+            y0 = c7;
+            y1 = c8;
+            y2 = c9;
+            y3 = c10;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = '0';
+            d1 = c4;
+
+            h0 = c13;
+            h1 = c14;
+            pm = c22 == 'P';
+
+            i0 = c16;
+            i1 = c17;
+
+            s0 = c19;
+            s1 = c20;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 24;
         } else if (c4 == '-' && c7 == '-'
                 && (c10 == ' ' || c10 == 'T')
                 && c13 == ':' && c16 == ':' && c19 == '.'
@@ -7628,6 +8214,48 @@ public class DateUtils {
             S8 = '0';
             zoneIdBegin = 25;
             isTimeZone = c25 == '|';
+        } else if (len == 25
+                && c3 == ' ' && c6 == ',' && c7 == ' ' && c12 == ',' && c13 == ' '
+                && c16 == ':' && c19 == ':'
+                && c22 == ' ' && (c23 == 'A' || c23 == 'P') && c24 == 'M'
+        ) {
+            y0 = c8;
+            y1 = c9;
+            y2 = c10;
+            y3 = c11;
+
+            int month = DateUtils.month(c0, c1, c2);
+            if (month > 0) {
+                m0 = (char) ('0' + month / 10);
+                m1 = (char) ('0' + (month % 10));
+            } else {
+                m0 = '0';
+                m1 = '0';
+            }
+
+            d0 = c4;
+            d1 = c5;
+
+            h0 = c14;
+            h1 = c15;
+            pm = c23 == 'P';
+
+            i0 = c17;
+            i1 = c18;
+
+            s0 = c20;
+            s1 = c21;
+
+            S0 = '0';
+            S1 = '0';
+            S2 = '0';
+            S3 = '0';
+            S4 = '0';
+            S5 = '0';
+            S6 = '0';
+            S7 = '0';
+            S8 = '0';
+            zoneIdBegin = 25;
         } else if (c4 == '-' && c7 == '-'
                 && (c10 == ' ' || c10 == 'T')
                 && c13 == ':' && c16 == ':' && c19 == '.'
@@ -7954,6 +8582,10 @@ public class DateUtils {
             return ZonedDateTime.parse(new String(str, off, len), formatter);
         } else {
             return null;
+        }
+
+        if (pm && h0 == '1' && h1 == '2') {
+            pm = false;
         }
 
         if (pm) {

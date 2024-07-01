@@ -77,4 +77,11 @@ public @interface JSONType {
      * @since 2.0.25
      */
     Class<? extends JSONReader.AutoTypeBeforeHandler> autoTypeBeforeHandler() default JSONReader.AutoTypeBeforeHandler.class;
+
+    /**
+     * Reduce code branches during code generation to improve performance,
+     * If it is true, there will be no code related to reference detection.
+     * @since 2.0.50
+     */
+    boolean disableReferenceDetect() default false;
 }

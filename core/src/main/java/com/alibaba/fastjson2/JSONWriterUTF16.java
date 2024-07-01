@@ -260,12 +260,11 @@ class JSONWriterUTF16
     }
 
     public void writeStringLatin1(byte[] value) {
-        if (value == null) {
-            writeStringNull();
+        if ((context.features & BrowserSecure.mask) != 0) {
+            writeStringLatin1BrowserSecure(value);
             return;
         }
 
-        boolean browserSecure = (context.features & BrowserSecure.mask) != 0;
         boolean escape = false;
         int off = this.off;
         int minCapacity = off + value.length + 2;
@@ -283,7 +282,33 @@ class JSONWriterUTF16
                 break;
             }
 
-            if (browserSecure && (c == '<' || c == '>' || c == '(' || c == ')')) {
+            chars[off++] = (char) c;
+        }
+
+        if (!escape) {
+            chars[off] = quote;
+            this.off = off + 1;
+            return;
+        }
+
+        this.off = start;
+        writeStringEscape(value);
+    }
+
+    protected final void writeStringLatin1BrowserSecure(byte[] value) {
+        boolean escape = false;
+        int off = this.off;
+        int minCapacity = off + value.length + 2;
+        if (minCapacity >= chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final int start = off;
+        final char[] chars = this.chars;
+        chars[off++] = quote;
+
+        for (byte c : value) {
+            if (c == '\\' || c == quote || c < ' ' || c == '<' || c == '>' || c == '(' || c == ')') {
                 escape = true;
                 break;
             }
@@ -1528,14 +1553,422 @@ class JSONWriterUTF16
             final char[] chars = this.chars;
             chars[off++] = ',';
             if (pretty) {
-                chars[off++] = (byte) '\n';
-                for (int i = 0; i < indent; ++i) {
-                    chars[off++] = (byte) '\t';
-                }
+                off = indent(chars, off, indent);
             }
         }
         System.arraycopy(name, 0, chars, off, name.length);
         this.off = off + name.length;
+    }
+
+    @Override
+    public final void writeName2Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 10 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        this.off = off + 5;
+    }
+
+    @Override
+    public final void writeName3Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 10 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        this.off = off + 6;
+    }
+
+    @Override
+    public final void writeName4Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 10 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        this.off = off + 7;
+    }
+
+    @Override
+    public final void writeName5Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 10 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        this.off = off + 8;
+    }
+
+    @Override
+    public final void writeName6Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 11 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        chars[off + 8] = ':';
+        this.off = off + 9;
+    }
+
+    @Override
+    public final void writeName7Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 12 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name);
+        chars[off + 8] = quote;
+        chars[off + 9] = ':';
+        this.off = off + 10;
+    }
+
+    @Override
+    public final void writeName8Raw(long name) {
+        int off = this.off;
+        int minCapacity = off + 13 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        chars[off++] = quote;
+        putLong(chars, off, name);
+        chars[off + 8] = quote;
+        chars[off + 9] = ':';
+        this.off = off + 10;
+    }
+
+    @Override
+    public final void writeName9Raw(long name0, int name1) {
+        int off = this.off;
+        int minCapacity = off + 14 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        this.off = off + 12;
+    }
+
+    @Override
+    public final void writeName10Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 18 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        this.off = off + 13;
+    }
+
+    @Override
+    public final void writeName11Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 18 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        this.off = off + 14;
+    }
+
+    @Override
+    public final void writeName12Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 18 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        this.off = off + 15;
+    }
+
+    @Override
+    public final void writeName13Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 18 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        this.off = off + 16;
+    }
+
+    @Override
+    public final void writeName14Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 19 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        chars[off + 16] = ':';
+        this.off = off + 17;
+    }
+
+    @Override
+    public final void writeName15Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 20 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        putLong(chars, off, name0, name1);
+        chars[off + 16] = quote;
+        chars[off + 17] = ':';
+        this.off = off + 18;
+    }
+
+    @Override
+    public final void writeName16Raw(long name0, long name1) {
+        int off = this.off;
+        int minCapacity = off + 21 + indent;
+        if (minCapacity >= this.chars.length) {
+            ensureCapacity(minCapacity);
+        }
+
+        final char[] chars = this.chars;
+        if (startObject) {
+            startObject = false;
+        } else {
+            chars[off++] = ',';
+            if (pretty) {
+                off = indent(chars, off, indent);
+            }
+        }
+
+        chars[off++] = quote;
+        putLong(chars, off, name0, name1);
+        chars[off + 16] = quote;
+        chars[off + 17] = ':';
+        this.off = off + 18;
+    }
+
+    private static void putLong(char[] chars, int off, long name) {
+        final long base = ARRAY_CHAR_BASE_OFFSET + (off << 1);
+        UNSAFE.putLong(chars, base,
+                (name & 0xFFL)
+                        | ((name & 0xFF00L) << 8)
+                        | ((name & 0xFF_0000L) << 16)
+                        | ((name & 0xFF00_0000L) << 24));
+        UNSAFE.putLong(chars, base + 8,
+                ((name & 0xFF_0000_0000L) >> 32)
+                        | ((name & 0xFF00_0000_0000L) >> 24)
+                        | ((name & 0xFF_0000_0000_0000L) >> 16)
+                        | ((name & 0xFF00_0000_0000_0000L) >> 8));
+    }
+
+    private static void putLong(char[] chars, int off, long name, int name1) {
+        final long base = ARRAY_CHAR_BASE_OFFSET + (off << 1);
+        UNSAFE.putLong(chars, base,
+                (name & 0xFFL)
+                        | ((name & 0xFF00L) << 8)
+                        | ((name & 0xFF_0000L) << 16)
+                        | ((name & 0xFF00_0000L) << 24));
+        UNSAFE.putLong(chars, base + 8,
+                ((name & 0xFF_0000_0000L) >> 32)
+                        | ((name & 0xFF00_0000_0000L) >> 24)
+                        | ((name & 0xFF_0000_0000_0000L) >> 16)
+                        | ((name & 0xFF00_0000_0000_0000L) >> 8));
+
+        UNSAFE.putLong(chars,
+                base + 16,
+                (name1 & 0xFFL)
+                        | ((name1 & 0xFF00L) << 8)
+                        | ((name1 & 0xFF0000L) << 16)
+                        | ((name1 & 0xFF00_0000L) << 24));
+    }
+
+    private static void putLong(char[] chars, int off, long name, long name1) {
+        final long base = ARRAY_CHAR_BASE_OFFSET + (off << 1);
+        UNSAFE.putLong(chars, base,
+                (name & 0xFFL)
+                        | ((name & 0xFF00L) << 8)
+                        | ((name & 0xFF_0000L) << 16)
+                        | ((name & 0xFF00_0000L) << 24));
+        UNSAFE.putLong(chars, base + 8,
+                ((name & 0xFF_0000_0000L) >> 32)
+                        | ((name & 0xFF00_0000_0000L) >> 24)
+                        | ((name & 0xFF_0000_0000_0000L) >> 16)
+                        | ((name & 0xFF00_0000_0000_0000L) >> 8));
+
+        UNSAFE.putLong(chars, base + 16,
+                (name1 & 0xFFL)
+                        | ((name1 & 0xFF00L) << 8)
+                        | ((name1 & 0xFF_0000L) << 16)
+                        | ((name1 & 0xFF00_0000L) << 24));
+        UNSAFE.putLong(chars, base + 24,
+                ((name1 & 0xFF_0000_0000L) >> 32)
+                        | ((name1 & 0xFF00_0000_0000L) >> 24)
+                        | ((name1 & 0xFF_0000_0000_0000L) >> 16)
+                        | ((name1 & 0xFF00_0000_0000_0000L) >> 8));
+    }
+
+    private static int indent(char[] chars, int off, int indent) {
+        chars[off++] = '\n';
+        int end = off + indent;
+        while (off < end) {
+            chars[off++] = '\t';
+        }
+        return off;
     }
 
     @Override
@@ -1562,7 +1995,7 @@ class JSONWriterUTF16
                 newCapacity = minCapacity;
             }
             if (newCapacity - maxArraySize > 0) {
-                throw new OutOfMemoryError();
+                throw new OutOfMemoryError("try enabling LargeObject feature instead");
             }
 
             // minCapacity is usually close to size, so this is a win:
@@ -2696,6 +3129,68 @@ class JSONWriterUTF16
         chars[off++] = ']';
     }
 
+    @Override
+    public final void writeString(boolean value) {
+        chars[off++] = quote;
+        writeBool(value);
+        chars[off++] = quote;
+    }
+
+    @Override
+    public final void writeString(byte value) {
+        boolean writeAsString = (context.features & WriteNonStringValueAsString.mask) == 0;
+        if (writeAsString) {
+            writeQuote();
+        }
+        writeInt8(value);
+        if (writeAsString) {
+            writeQuote();
+        }
+    }
+
+    @Override
+    public final void writeString(short value) {
+        boolean writeAsString = (context.features & WriteNonStringValueAsString.mask) == 0;
+        if (writeAsString) {
+            writeQuote();
+        }
+        writeInt16(value);
+        if (writeAsString) {
+            writeQuote();
+        }
+    }
+
+    @Override
+    public final void writeString(int value) {
+        boolean writeAsString = (context.features & WriteNonStringValueAsString.mask) == 0;
+        if (writeAsString) {
+            writeQuote();
+        }
+        writeInt32(value);
+        if (writeAsString) {
+            writeQuote();
+        }
+    }
+
+    @Override
+    public final void writeString(long value) {
+        boolean writeAsString = (context.features & (WriteNonStringValueAsString.mask | WriteLongAsString.mask)) == 0;
+        if (writeAsString) {
+            writeQuote();
+        }
+        writeInt64(value);
+        if (writeAsString) {
+            writeQuote();
+        }
+    }
+
+    private void writeQuote() {
+        if (off == chars.length) {
+            ensureCapacity(off + 1);
+        }
+        chars[off++] = quote;
+    }
+
     public final void writeString(final char[] chars) {
         if (chars == null) {
             writeStringNull();
@@ -2778,10 +3273,19 @@ class JSONWriterUTF16
             chars[off++] = value ? '1' : '0';
         } else {
             if (!value) {
-                chars[off++] = 'f';
+                chars[off] = 'f';
+                chars[off + 1] = 'a';
+                chars[off + 2] = 'l';
+                chars[off + 3] = 's';
+                chars[off + 4] = 'e';
+                off += 5;
+            } else {
+                chars[off] = 't';
+                chars[off + 1] = 'r';
+                chars[off + 2] = 'u';
+                chars[off + 3] = 'e';
+                off += 4;
             }
-            UNSAFE.putLong(chars, ARRAY_CHAR_BASE_OFFSET + ((long) off << 1), value ? TRUE_64 : ALSE_64);
-            off += 4;
         }
         this.off = off;
     }

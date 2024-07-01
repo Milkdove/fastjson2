@@ -1,9 +1,6 @@
 package com.alibaba.fastjson2.writer;
 
-import com.alibaba.fastjson2.JSONFactory;
-import com.alibaba.fastjson2.JSONPObject;
-import com.alibaba.fastjson2.JSONPath;
-import com.alibaba.fastjson2.JSONWriter;
+import com.alibaba.fastjson2.*;
 import com.alibaba.fastjson2.annotation.*;
 import com.alibaba.fastjson2.codec.BeanInfo;
 import com.alibaba.fastjson2.codec.FieldInfo;
@@ -15,6 +12,7 @@ import com.alibaba.fastjson2.support.money.MoneySupport;
 import com.alibaba.fastjson2.util.*;
 
 import java.io.File;
+import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -60,16 +58,24 @@ public class ObjectWriterBaseModule
                 Class superclass = objectClass.getSuperclass();
                 if (superclass != Object.class && superclass != null && superclass != Enum.class) {
                     getBeanInfo(beanInfo, superclass);
+                }
 
-                    if (beanInfo.seeAlso != null && beanInfo.seeAlsoNames != null) {
-                        for (int i = 0; i < beanInfo.seeAlso.length; i++) {
-                            Class seeAlso = beanInfo.seeAlso[i];
-                            if (seeAlso == objectClass && i < beanInfo.seeAlsoNames.length) {
-                                String seeAlsoName = beanInfo.seeAlsoNames[i];
-                                if (seeAlsoName != null && seeAlsoName.length() != 0) {
-                                    beanInfo.typeName = seeAlsoName;
-                                    break;
-                                }
+                Class[] interfaces = objectClass.getInterfaces();
+                for (Class item : interfaces) {
+                    if (item == Serializable.class) {
+                        continue;
+                    }
+                    getBeanInfo(beanInfo, item);
+                }
+
+                if (beanInfo.seeAlso != null && beanInfo.seeAlsoNames != null) {
+                    for (int i = 0; i < beanInfo.seeAlso.length; i++) {
+                        Class seeAlso = beanInfo.seeAlso[i];
+                        if (seeAlso == objectClass && i < beanInfo.seeAlsoNames.length) {
+                            String seeAlsoName = beanInfo.seeAlsoNames[i];
+                            if (seeAlsoName != null && seeAlsoName.length() != 0) {
+                                beanInfo.typeName = seeAlsoName;
+                                break;
                             }
                         }
                     }
@@ -305,25 +311,21 @@ public class ObjectWriterBaseModule
                 boolean useJacksonAnnotation = JSONFactory.isUseJacksonAnnotation();
                 switch (annotationTypeName) {
                     case "com.fasterxml.jackson.annotation.JsonIgnore":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonIgnore":
                         if (useJacksonAnnotation) {
                             processJacksonJsonIgnore(fieldInfo, annotation);
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonAnyGetter":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonAnyGetter":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.UNWRAPPED_MASK;
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonValue":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonValue":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.VALUE_MASK;
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonRawValue":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonRawValue":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.RAW_VALUE_MASK;
                         }
@@ -332,31 +334,39 @@ public class ObjectWriterBaseModule
                         processJSONField1x(fieldInfo, annotation);
                         break;
                     case "com.fasterxml.jackson.annotation.JsonProperty":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonProperty":
                         if (useJacksonAnnotation) {
                             processJacksonJsonProperty(fieldInfo, annotation);
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonFormat":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonFormat":
                         if (useJacksonAnnotation) {
                             processJacksonJsonFormat(fieldInfo, annotation);
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonInclude":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonInclude":
                         if (useJacksonAnnotation) {
                             processJacksonJsonInclude(beanInfo, annotation);
                         }
                         break;
-                    case "com.alibaba.fastjson2.adapter.jackson.databind.annotation.JsonSerialize":
                     case "com.fasterxml.jackson.databind.annotation.JsonSerialize":
                         if (useJacksonAnnotation) {
                             processJacksonJsonSerialize(fieldInfo, annotation);
                         }
                         break;
                     case "com.google.gson.annotations.SerializedName":
-                        processGsonSerializedName(fieldInfo, annotation);
+                        if (JSONFactory.isUseGsonAnnotation()) {
+                            processGsonSerializedName(fieldInfo, annotation);
+                        }
+                        break;
+                    case "com.fasterxml.jackson.annotation.JsonManagedReference":
+                        if (useJacksonAnnotation) {
+                            fieldInfo.features |= JSONWriter.Feature.ReferenceDetection.mask;
+                        }
+                        break;
+                    case "com.fasterxml.jackson.annotation.JsonBackReference":
+                        if (useJacksonAnnotation) {
+                            fieldInfo.features |= FieldInfo.BACKR_EFERENCE;
+                        }
                         break;
                     default:
                         break;
@@ -479,6 +489,7 @@ public class ObjectWriterBaseModule
 
         private void processJacksonJsonPropertyOrder(BeanInfo beanInfo, Annotation annotation) {
             Class<? extends Annotation> annotationClass = annotation.getClass();
+            final AtomicBoolean alphabetic = new AtomicBoolean(false);
             BeanUtils.annotationMethods(annotationClass, m -> {
                 String name = m.getName();
                 try {
@@ -488,11 +499,16 @@ public class ObjectWriterBaseModule
                         if (value.length != 0) {
                             beanInfo.orders = value;
                         }
+                    } else if ("alphabetic".equals(name)) {
+                        alphabetic.set((Boolean) result);
                     }
                 } catch (Throwable ignored) {
                     // ignored
                 }
             });
+            if (beanInfo.orders == null || beanInfo.orders.length == 0) {
+                beanInfo.alphabetic = alphabetic.get();
+            }
         }
 
         private void processJacksonJsonSerialize(FieldInfo fieldInfo, Annotation annotation) {
@@ -538,13 +554,22 @@ public class ObjectWriterBaseModule
                     switch (name) {
                         case "value":
                             String value = (String) result;
-                            if (!value.isEmpty()) {
+                            if (!value.isEmpty()
+                                    && (fieldInfo.fieldName == null || fieldInfo.fieldName.isEmpty())
+                            ) {
                                 fieldInfo.fieldName = value;
                             }
                             break;
                         case "access": {
                             String access = ((Enum) result).name();
                             fieldInfo.ignore = "WRITE_ONLY".equals(access);
+                            break;
+                        }
+                        case "index": {
+                            int index = (Integer) result;
+                            if (index != -1) {
+                                fieldInfo.ordinal = index;
+                            }
                             break;
                         }
                         default:
@@ -810,13 +835,11 @@ public class ObjectWriterBaseModule
                 String annotationTypeName = annotationType.getName();
                 switch (annotationTypeName) {
                     case "com.fasterxml.jackson.annotation.JsonIgnore":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonIgnore":
                         if (useJacksonAnnotation) {
                             processJacksonJsonIgnore(fieldInfo, annotation);
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonAnyGetter":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonAnyGetter":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.UNWRAPPED_MASK;
                         }
@@ -828,7 +851,6 @@ public class ObjectWriterBaseModule
                         fieldInfo.ignore = true;
                         fieldInfo.isTransient = true;
                         break;
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonProperty":
                     case "com.fasterxml.jackson.annotation.JsonProperty": {
                         if (useJacksonAnnotation) {
                             processJacksonJsonProperty(fieldInfo, annotation);
@@ -836,27 +858,33 @@ public class ObjectWriterBaseModule
                         break;
                     }
                     case "com.fasterxml.jackson.annotation.JsonFormat":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonFormat":
                         if (useJacksonAnnotation) {
                             processJacksonJsonFormat(fieldInfo, annotation);
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonValue":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonValue":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.VALUE_MASK;
                         }
                         break;
                     case "com.fasterxml.jackson.annotation.JsonRawValue":
-                    case "com.alibaba.fastjson2.adapter.jackson.annotation.JsonRawValue":
                         if (useJacksonAnnotation) {
                             fieldInfo.features |= FieldInfo.RAW_VALUE_MASK;
                         }
                         break;
-                    case "com.alibaba.fastjson2.adapter.jackson.databind.annotation.JsonSerialize":
                     case "com.fasterxml.jackson.databind.annotation.JsonSerialize":
                         if (useJacksonAnnotation) {
                             processJacksonJsonSerialize(fieldInfo, annotation);
+                        }
+                        break;
+                    case "com.fasterxml.jackson.annotation.JsonInclude":
+                        if (useJacksonAnnotation) {
+                            processJacksonJsonInclude(fieldInfo, annotation);
+                        }
+                        break;
+                    case "com.fasterxml.jackson.annotation.JsonUnwrapped":
+                        if (useJacksonAnnotation) {
+                            processJacksonJsonUnwrapped(fieldInfo, annotation);
                         }
                         break;
                     default:
@@ -889,8 +917,17 @@ public class ObjectWriterBaseModule
                 fieldInfo.label = label;
             }
 
+            String locale = jsonField.locale();
+            if (!locale.isEmpty()) {
+                String[] parts = locale.split("_");
+                if (parts.length == 2) {
+                    fieldInfo.locale = new Locale(parts[0], parts[1]);
+                }
+            }
+
+            boolean ignore = !jsonField.serialize();
             if (!fieldInfo.ignore) {
-                fieldInfo.ignore = !jsonField.serialize();
+                fieldInfo.ignore = ignore;
             }
 
             if (jsonField.unwrapped()) {
@@ -899,6 +936,9 @@ public class ObjectWriterBaseModule
 
             for (JSONWriter.Feature feature : jsonField.serializeFeatures()) {
                 fieldInfo.features |= feature.mask;
+                if (fieldInfo.ignore && !ignore && feature == JSONWriter.Feature.FieldBased) {
+                    fieldInfo.ignore = false;
+                }
             }
 
             int ordinal = jsonField.ordinal();
@@ -1039,6 +1079,19 @@ public class ObjectWriterBaseModule
                 return new ObjectWriterImplInt8ValueArray(
                         o -> ((ByteBuffer) o).array()
                 );
+            case "java.awt.Color":
+                try {
+                    List<FieldWriter> fieldWriters = Arrays.asList(
+                            ObjectWriters.fieldWriter("r", objectClass.getMethod("getRed")),
+                            ObjectWriters.fieldWriter("g", objectClass.getMethod("getGreen")),
+                            ObjectWriters.fieldWriter("b", objectClass.getMethod("getBlue")),
+                            ObjectWriters.fieldWriter("alpha", objectClass.getMethod("getAlpha"))
+                    );
+                    return new ObjectWriter4(objectClass, null, null, 0, fieldWriters);
+                } catch (NoSuchMethodException e) {
+                    // ignored
+                }
+
             default:
                 break;
         }
@@ -1302,7 +1355,7 @@ public class ObjectWriterBaseModule
                 return externalObjectWriter;
             }
 
-            BeanInfo beanInfo = new BeanInfo();
+            BeanInfo beanInfo = provider.createBeanInfo();
             Class mixIn = provider.getMixIn(clazz);
             if (mixIn != null) {
                 annotationProcessor.getBeanInfo(beanInfo, mixIn);
@@ -1372,7 +1425,7 @@ public class ObjectWriterBaseModule
                 return ObjectWriterImplInstant.INSTANCE;
             }
 
-            if (Duration.class == clazz) {
+            if (Duration.class == clazz || Period.class == clazz) {
                 return ObjectWriterImplToString.INSTANCE;
             }
 
@@ -1488,7 +1541,7 @@ public class ObjectWriterBaseModule
             }
         }
 
-        BeanInfo beanInfo = new BeanInfo();
+        BeanInfo beanInfo = provider.createBeanInfo();
 
         Class[] interfaces = enumClass.getInterfaces();
         for (int i = 0; i < interfaces.length; i++) {

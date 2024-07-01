@@ -119,7 +119,7 @@ class JSONReaderASCII
             if (ch == '[' && nameBegin > 0 && (preFieldName = getFieldName()) != null) {
                 errorMsg = "illegal fieldName input " + ch + ", previous fieldName " + preFieldName;
             } else {
-                errorMsg = "illegal fieldName input" + ch;
+                errorMsg = "illegal fieldName input " + ch;
             }
 
             throw new JSONException(info(errorMsg));
@@ -420,6 +420,8 @@ class JSONReaderASCII
                 case ')':
                 case ',':
                 case ':':
+                case '|':
+                case '&':
                 case EOI:
                     nameLength = i;
                     this.nameEnd = ch == EOI ? offset : offset - 1;
@@ -1540,6 +1542,10 @@ class JSONReaderASCII
 
             if ((context.features & Feature.TrimString.mask) != 0) {
                 str = str.trim();
+            }
+            // empty string to null
+            if (str.isEmpty() && (context.features & Feature.EmptyStringAsNull.mask) != 0) {
+                str = null;
             }
 
             int ch = ++offset == end ? EOI : bytes[offset++];

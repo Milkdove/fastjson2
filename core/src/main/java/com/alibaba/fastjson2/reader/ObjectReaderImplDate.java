@@ -15,6 +15,7 @@ import java.time.temporal.ChronoField;
 import java.time.temporal.TemporalAccessor;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Map;
 
 public class ObjectReaderImplDate
         extends DateTimeCodec
@@ -39,23 +40,15 @@ public class ObjectReaderImplDate
 
     @Override
     public Object readJSONBObject(JSONReader jsonReader, Type fieldType, Object fieldName, long features) {
-        if (jsonReader.isInt()) {
-            long millis = jsonReader.readInt64Value();
-            if (formatUnixTime) {
-                millis *= 1000;
-            }
-            return new Date(millis);
-        }
-
-        if (jsonReader.readIfNull()) {
-            return null;
-        }
-
         return readDate(jsonReader);
     }
 
     @Override
     public Object readObject(JSONReader jsonReader, Type fieldType, Object fieldName, long features) {
+        return readDate(jsonReader);
+    }
+
+    private Object readDate(JSONReader jsonReader) {
         if (jsonReader.isInt()) {
             long millis = jsonReader.readInt64Value();
             if (formatUnixTime) {
@@ -68,22 +61,28 @@ public class ObjectReaderImplDate
             return null;
         }
 
-        return readDate(jsonReader);
-    }
+        if (jsonReader.nextIfNullOrEmptyString()) {
+            return null;
+        }
 
-    private Object readDate(JSONReader jsonReader) {
+        if (jsonReader.current() == 'n') {
+            return jsonReader.readNullOrNewDate();
+        }
+
         long millis;
-        if (useSimpleFormatter) {
+        if (useSimpleFormatter || locale != null) {
             String str = jsonReader.readString();
             try {
-                return new SimpleDateFormat(format).parse(str);
+                SimpleDateFormat dateFormat;
+                if (locale != null) {
+                    dateFormat = new SimpleDateFormat(format, locale);
+                } else {
+                    dateFormat = new SimpleDateFormat(format);
+                }
+                return dateFormat.parse(str);
             } catch (ParseException e) {
                 throw new JSONException(jsonReader.info("parse error : " + str), e);
             }
-        }
-
-        if (jsonReader.nextIfNullOrEmptyString()) {
-            return null;
         }
 
         if ((formatUnixTime || formatMillis) && jsonReader.isString()) {
@@ -169,6 +168,10 @@ public class ObjectReaderImplDate
                 millis += nanos / 1000_000;
             }
         } else {
+            if (jsonReader.isDate()) {
+                return jsonReader.readDate();
+            }
+
             if (jsonReader.isTypeRedirect() && jsonReader.nextIfMatchIdent('"', 'v', 'a', 'l', '"')) {
                 jsonReader.nextIfMatch(':');
                 millis = jsonReader.readInt64Value();
@@ -188,5 +191,9 @@ public class ObjectReaderImplDate
         }
 
         return new Date(millis);
+    }
+
+    public Date createInstance(Map map, long features) {
+        return TypeUtils.toDate(map);
     }
 }

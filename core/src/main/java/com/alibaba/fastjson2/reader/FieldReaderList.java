@@ -58,7 +58,7 @@ public class FieldReaderList<T, V>
             return new ArrayList<>();
         }
 
-        return (Collection<V>) getObjectReader(context).createInstance();
+        return (Collection<V>) getObjectReader(context).createInstance(features);
     }
 
     @Override
@@ -97,7 +97,7 @@ public class FieldReaderList<T, V>
                     break;
                 }
 
-                if (jsonReader.readReference((List) list, i)) {
+                if (jsonReader.readReference(list, i)) {
                     continue;
                 }
 
@@ -233,7 +233,7 @@ public class FieldReaderList<T, V>
             }
 
             if (autoTypeObjectReader == null) {
-                throw new JSONException(jsonReader.info("auotype not support : " + jsonReader.getString()));
+                throw new JSONException(jsonReader.info("autoType not support : " + jsonReader.getString()));
             }
 
             return autoTypeObjectReader;

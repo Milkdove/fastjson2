@@ -236,6 +236,15 @@ public class JSONTest {
     }
 
     @Test
+    public void test_toJSONBytes_2() {
+        JSONWriter.Context context = JSONFactory.createWriteContext();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        JSON.writeTo(out, null, context);
+        assertEquals("null", new String(out.toByteArray()));
+    }
+
+    @Test
     public void test_object_empty() {
         Map object = (Map) JSON.parse("{}");
         assertTrue(object.isEmpty());
@@ -1031,6 +1040,20 @@ public class JSONTest {
                     JSON.writeTo(out, JSONObject.of("id", 123), JSONWriter.Feature.PrettyFormat));
         }
         {
+            JSONWriter.Context context = JSONFactory.createWriteContext();
+            ByteArrayOutputStream out = new ByteArrayOutputStream() {
+                public void write(byte[] b, int off, int len) {
+                    throw new UnsupportedOperationException();
+                }
+            };
+            assertThrows(JSONException.class, () ->
+                    JSON.writeTo(out, JSONObject.of("id", 123)));
+            assertThrows(JSONException.class, () ->
+                    JSON.writeTo(out, JSONObject.of("id", 123), JSONWriter.Feature.PrettyFormat));
+            assertThrows(JSONException.class, () ->
+                    JSON.writeTo(out, JSONObject.of("id", 123), context));
+        }
+        {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             assertThrows(JSONException.class, () ->
                     JSON.writeTo(out, JSONObject.of("id", 123), new Filter[]{new NameFilter() {
@@ -1223,5 +1246,23 @@ public class JSONTest {
             byte[] bytes = JSON.toJSONBytes(null, StandardCharsets.ISO_8859_1, JSONWriter.Feature.OptimizedForAscii);
             assertEquals("null", new String(bytes, StandardCharsets.ISO_8859_1));
         }
+    }
+
+    @Test
+    public void paseByte() {
+        String str = "{}";
+        byte[] utf8 = str.getBytes(StandardCharsets.UTF_8);
+        JSONObject parse = (JSONObject) JSON.parse(utf8, JSONFactory.createReadContext());
+        assertTrue(parse.isEmpty());
+
+        JSONObject parse1 = (JSONObject) JSON.parse(utf8, 0, utf8.length, StandardCharsets.UTF_8, JSONFactory.createReadContext());
+        assertTrue(parse1.isEmpty());
+    }
+
+    @Test
+    public void paseChars() {
+        String str = "{}";
+        JSONObject parse = (JSONObject) JSON.parse(str.toCharArray(), JSONFactory.createReadContext());
+        assertTrue(parse.isEmpty());
     }
 }
